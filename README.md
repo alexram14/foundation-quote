@@ -2,6 +2,8 @@
 
 A small internal tool for foundation repair sales reps: enter the homeowner, pick the scope of work (piers, wall anchors, crack injection, drain tile, encapsulation…), and get a priced quote in seconds that can be printed or saved as PDF. Works on phones, so reps can quote on site.
 
+**Live demo:** https://foundation-quote.vercel.app
+
 > Demo project with **sample prices**. Not affiliated with any company.
 
 ## Stack
@@ -9,7 +11,8 @@ A small internal tool for foundation repair sales reps: enter the homeowner, pic
 - **Next.js 15** (App Router) + **React 19**
 - **TypeScript** (strict mode)
 - Plain CSS, light and dark mode, print stylesheet
-- Coming next: **Supabase/Postgres** to save quotes, deployed on **Vercel**
+- Deployed on **Vercel** (auto-deploys on every push to `main`)
+- Coming next: **Supabase/Postgres** to save quotes
 
 ## How it's organized
 
