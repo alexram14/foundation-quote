@@ -1,15 +1,12 @@
 "use client";
 // "use client" = this page runs in the browser, so it can react instantly to typing.
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { SERVICES, MOBILIZATION_FEE_CENTS } from "@/lib/services.ts";
 import { calculateQuote, formatUSD } from "@/lib/quote.ts";
-
-const MARKETS = {
-  "Kansas City": 8.5,
-  "Dallas–Fort Worth": 8.25,
-} as const; // sample default tax rates; the rep can override them
-type Market = keyof typeof MARKETS;
+import { MARKETS, type Market } from "@/lib/markets.ts";
+import { saveQuote } from "./actions.ts";
 
 export default function QuotePage() {
   const [customer, setCustomer] = useState({ name: "", address: "", rep: "" });
@@ -17,6 +14,8 @@ export default function QuotePage() {
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [discountPercent, setDiscountPercent] = useState("0");
   const [taxPercent, setTaxPercent] = useState(String(MARKETS["Kansas City"]));
+  const [saveStatus, setSaveStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [isSaving, startSaving] = useTransition();
 
   // Recalculate only when inputs change. The math lives in lib/quote.ts.
   const quote = useMemo(
@@ -37,6 +36,26 @@ export default function QuotePage() {
     setTaxPercent(String(MARKETS[m]));
   }
 
+  function handleSave() {
+    setSaveStatus(null);
+    startSaving(async () => {
+      const result = await saveQuote({
+        customerName: customer.name,
+        address: customer.address,
+        salesRep: customer.rep,
+        market,
+        lines: SERVICES.map((s) => ({ serviceId: s.id, quantity: Number(quantities[s.id] || 0) })),
+        discountPercent: Number(discountPercent),
+        taxPercent: Number(taxPercent),
+      });
+      setSaveStatus(
+        result.ok
+          ? { kind: "ok", text: `Quote saved for ${customer.name.trim()}.` }
+          : { kind: "error", text: result.error },
+      );
+    });
+  }
+
   return (
     <main className="wrap">
       <header className="top">
@@ -44,10 +63,30 @@ export default function QuotePage() {
           <h1>Foundation Quote Builder</h1>
           <p className="muted">Fill in the job, get a price in seconds, print or save as PDF.</p>
         </div>
-        <button className="primary no-print" onClick={() => window.print()} disabled={quote.lines.length === 0}>
-          Print / Save PDF
-        </button>
+        <nav className="actions no-print">
+          <Link href="/quotes" className="link">
+            Saved quotes
+          </Link>
+          <button className="secondary" onClick={() => window.print()} disabled={quote.lines.length === 0}>
+            Print / Save PDF
+          </button>
+          <button className="primary" onClick={handleSave} disabled={quote.lines.length === 0 || isSaving}>
+            {isSaving ? "Saving…" : "Save quote"}
+          </button>
+        </nav>
       </header>
+
+      {saveStatus && (
+        <p className={`status ${saveStatus.kind} no-print`} role="status">
+          {saveStatus.text}
+          {saveStatus.kind === "ok" && (
+            <>
+              {" "}
+              <Link href="/quotes">See saved quotes →</Link>
+            </>
+          )}
+        </p>
+      )}
 
       <section className="card">
         <h2>Customer</h2>
