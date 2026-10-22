@@ -37,6 +37,10 @@ export function calculateQuote(input: QuoteInput): QuoteResult {
       errors.push(`Unknown service: ${line.serviceId}`);
       continue;
     }
+    if (Number.isNaN(line.quantity)) {
+      errors.push(`${service.name}: enter a number, like 4 or 10.5`);
+      continue;
+    }
     if (!Number.isFinite(line.quantity) || line.quantity <= 0) continue; // empty rows are ignored
     if (service.wholeUnits && !Number.isInteger(line.quantity)) {
       errors.push(`${service.name}: quantity must be a whole number`);
@@ -63,6 +67,18 @@ export function calculateQuote(input: QuoteInput): QuoteResult {
     totalCents: subtotalCents - discountCents + taxCents,
     errors,
   };
+}
+
+/**
+ * Turn what the rep typed into a number. Accepts "10.5" and "10,5" (comma is common in Mexico
+ * and on Spanish keyboards). Empty means 0. Anything else returns NaN so it can be reported,
+ * instead of being silently turned into another number.
+ */
+export function parseQuantity(text: string): number {
+  const cleaned = text.trim().replace(",", ".");
+  if (cleaned === "") return 0;
+  if (!/^\d+(\.\d+)?$/.test(cleaned)) return Number.NaN;
+  return Number(cleaned);
 }
 
 export function formatUSD(cents: number): string {

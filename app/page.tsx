@@ -4,7 +4,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { SERVICES, MOBILIZATION_FEE_CENTS } from "@/lib/services.ts";
-import { calculateQuote, formatUSD } from "@/lib/quote.ts";
+import { calculateQuote, formatUSD, parseQuantity } from "@/lib/quote.ts";
 import { MARKETS, type Market } from "@/lib/markets.ts";
 import { saveQuote } from "./actions.ts";
 
@@ -21,7 +21,7 @@ export default function QuotePage() {
   const quote = useMemo(
     () =>
       calculateQuote({
-        lines: SERVICES.map((s) => ({ serviceId: s.id, quantity: Number(quantities[s.id] || 0) })),
+        lines: SERVICES.map((s) => ({ serviceId: s.id, quantity: parseQuantity(quantities[s.id] ?? "") })),
         discountPercent: Number(discountPercent),
         taxPercent: Number(taxPercent),
       }),
@@ -44,7 +44,7 @@ export default function QuotePage() {
         address: customer.address,
         salesRep: customer.rep,
         market,
-        lines: SERVICES.map((s) => ({ serviceId: s.id, quantity: Number(quantities[s.id] || 0) })),
+        lines: SERVICES.map((s) => ({ serviceId: s.id, quantity: parseQuantity(quantities[s.id] ?? "") })),
         discountPercent: Number(discountPercent),
         taxPercent: Number(taxPercent),
       });
@@ -143,10 +143,10 @@ export default function QuotePage() {
                   <td className="num">
                     <input
                       className="qty"
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      step={s.wholeUnits ? 1 : 0.5}
+                      // text + decimal keypad: type="number" silently drops a comma ("10,5" became 105)
+                      type="text"
+                      inputMode={s.wholeUnits ? "numeric" : "decimal"}
+                      autoComplete="off"
                       value={quantities[s.id] ?? ""}
                       placeholder="0"
                       onChange={(e) => setQuantities({ ...quantities, [s.id]: e.target.value })}

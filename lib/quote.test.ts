@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calculateQuote } from "./quote.ts";
+import { calculateQuote, parseQuantity } from "./quote.ts";
 
 test("empty quote is zero (no mobilization fee without work)", () => {
   const r = calculateQuote({ lines: [], discountPercent: 0, taxPercent: 8 });
@@ -36,4 +36,19 @@ test("out-of-range discount is reported and clamped", () => {
   const r = calculateQuote({ lines: [{ serviceId: "sump-pump", quantity: 1 }], discountPercent: 150, taxPercent: 0 });
   assert.ok(r.errors.some((e) => e.includes("Discount")));
   assert.equal(r.totalCents, 0); // clamped to 100%
+});
+
+test("quantities accept a decimal point or a decimal comma", () => {
+  assert.equal(parseQuantity("10.5"), 10.5);
+  assert.equal(parseQuantity("10,5"), 10.5); // must NOT become 105
+  assert.equal(parseQuantity(" 4 "), 4);
+  assert.equal(parseQuantity(""), 0);
+  assert.ok(Number.isNaN(parseQuantity("1,000.5")));
+  assert.ok(Number.isNaN(parseQuantity("abc")));
+});
+
+test("text that isn't a number is reported, not guessed", () => {
+  const r = calculateQuote({ lines: [{ serviceId: "push-pier", quantity: parseQuantity("4a") }], discountPercent: 0, taxPercent: 0 });
+  assert.equal(r.lines.length, 0);
+  assert.ok(r.errors[0].includes("enter a number"));
 });
